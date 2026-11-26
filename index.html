@@ -1334,7 +1334,7 @@ But we see you. We get it. We love you.</p>
 
   /* Home-screen app: save a copy so it opens with no signal (only works when the page is on a real web address). */
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
-    try { navigator.serviceWorker.register('sw.js').catch(function () {}); } catch (e) {}
+    try { navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(function () {}); } catch (e) {}
   }
 
   spawnAll(false);
