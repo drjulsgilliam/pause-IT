@@ -56,7 +56,10 @@ button { font-family: var(--text); font-size: 1.125rem; color: var(--ink); }
   display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 8px;
 }
 .credit { margin: 0; text-align: center; color: var(--soft); font-size: .8125rem; line-height: 1.3; text-wrap: balance; }
-.brand { margin: 0 0 6px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 1.45rem; font-weight: 400; line-height: 1; }
+.top { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px 10px; }
+.top .levels { grid-column: 1 / -1; }
+.what { padding: 6px 14px; font-size: 1rem; border-radius: 999px; }
+.brand { margin: 0; display: flex; align-items: center; justify-content: flex-start; gap: 8px; font-size: 1.45rem; font-weight: 400; line-height: 1; }
 .brand svg { width: 30px; height: 30px; flex: 0 0 auto; }
 .brand i { font-style: normal; color: var(--love); }
 .brand b { color: var(--calm); }
@@ -76,6 +79,17 @@ button { font-family: var(--text); font-size: 1.125rem; color: var(--ink); }
 #lvl3 { grid-template-rows: minmax(0, 1fr) auto auto; }
 #lvl4 { grid-template-rows: minmax(0, 1fr) auto auto; }
 
+dialog {
+  background: #211c3e; color: var(--ink); border: 1.5px solid var(--line); border-radius: 20px;
+  width: min(94vw, 30rem); max-height: 94vh; padding: 16px; font-family: var(--text); font-size: 1.0625rem; line-height: 1.35;
+}
+dialog::backdrop { background: rgb(10 9 24 / .78); }
+dialog h2 { margin: 0 0 8px; font-size: 1.4rem; line-height: 1.2; outline: none; }
+dialog p { margin: 0 0 9px; }
+dialog ol { margin: 0 0 9px; padding-left: 1.3em; display: flex; flex-direction: column; gap: 4px; }
+dialog .fine { color: var(--soft); font-size: 1rem; }
+dialog .btnrow { margin-top: 4px; }
+dialog .btnrow button { padding: 11px 8px; }
 :is(.spot, .pause, .chip, .plain, .solid, .lv, .stage, .pick):focus-visible { outline: 3px solid var(--calm); outline-offset: 2px; }
 
 .scene { position: relative; width: 100%; min-height: 0; }
@@ -171,7 +185,7 @@ button { font-family: var(--text); font-size: 1.125rem; color: var(--ink); }
 <canvas id="sky" aria-hidden="true"></canvas>
 
 <main class="app" id="app" data-level="1">
-  <header>
+  <header class="top">
     <h1 class="brand">
       <svg viewBox="0 0 48 48" aria-hidden="true">
         <circle cx="24" cy="24" r="21" fill="none" stroke="#8fe0d6" stroke-width="3"/>
@@ -181,6 +195,7 @@ button { font-family: var(--text); font-size: 1.125rem; color: var(--ink); }
       </svg>
       <span>pause<i>-</i><b>IT</b></span>
     </h1>
+    <button class="plain what" id="aboutBtn" type="button" aria-haspopup="dialog">What is this?</button>
     <nav class="levels" aria-label="Levels">
       <button class="lv" id="nav1" type="button" aria-current="true"><b>1</b><span>Stop</span></button>
       <button class="lv" id="nav2" type="button"><b>2</b><span>You are safe</span></button>
@@ -281,6 +296,48 @@ But we see you. We get it. We love you.</p>
   </footer>
 </main>
 
+<dialog id="aboutDialog" aria-labelledby="aboutTitle">
+  <div id="aboutMain">
+  <h2 id="aboutTitle" tabindex="-1" autofocus>What is pause-IT?</h2>
+  <p>A place to stop when a feeling gets too big and you want to do something right now to make it end. Made for people with ADHD who feel strongly and act fast.</p>
+  <p>It does not fix the problem. It gets you through the moment without sending or saying something you cannot take back.</p>
+  <ol>
+    <li><strong>Stop.</strong> Hold the button. The feeling goes into a box for later.</li>
+    <li><strong>You are safe.</strong> Nothing to do. Nothing to fix.</li>
+    <li><strong>You are enough.</strong> Let go of approval. Come back to loving you.</li>
+    <li><strong>It will be OK.</strong> Park it and go do something else.</li>
+  </ol>
+  <p>Repeat as often as you need. Nothing is sent anywhere.</p>
+  <p class="fine">Not medical care. If you might hurt yourself, call or text 988 (US).</p>
+  <div class="btnrow">
+    <button class="plain" id="toInstall" type="button">Put it on my phone</button>
+    <button class="solid" id="aboutClose" type="button">Got it</button>
+  </div>
+  </div>
+  <div id="aboutInstall" hidden>
+    <h2 id="installTitle" tabindex="-1">Put pause-IT on your phone</h2>
+    <p>Then it is one tap away, like any other app. Look for the pink heart.</p>
+    <p><strong>iPhone, in Safari</strong></p>
+    <ol>
+      <li>Open this page in Safari.</li>
+      <li>Tap the Share button: the square with an arrow pointing up.</li>
+      <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
+      <li>Tap <strong>Add</strong>.</li>
+    </ol>
+    <p><strong>Android, in Chrome</strong></p>
+    <ol>
+      <li>Open this page in Chrome.</li>
+      <li>Tap the three dots at the top right.</li>
+      <li>Tap <strong>Add to Home screen</strong> or <strong>Install app</strong>.</li>
+      <li>Tap <strong>Add</strong> or <strong>Install</strong>.</li>
+    </ol>
+    <div class="btnrow">
+      <button class="plain" id="installBack" type="button">Back</button>
+      <button class="solid" id="installClose" type="button">Got it</button>
+    </div>
+  </div>
+</dialog>
+
 <script>
 (function () {
   'use strict';
@@ -308,6 +365,17 @@ But we see you. We get it. We love you.</p>
     el._t = setTimeout(function () { el.textContent = text; el.classList.remove('is-out'); }, 280);
   }
   function setText(el, text) { if (el._txt !== text) { el._txt = text; el.textContent = text; } }
+
+  function aboutPane(install) {
+    $('aboutMain').hidden = install; $('aboutInstall').hidden = !install;
+    $('aboutDialog').scrollTop = 0;
+    if (install) $('installTitle').focus();
+  }
+  $('aboutBtn').addEventListener('click', function () { aboutPane(false); $('aboutDialog').showModal(); });
+  $('aboutClose').addEventListener('click', function () { $('aboutDialog').close(); });
+  $('installClose').addEventListener('click', function () { $('aboutDialog').close(); });
+  $('toInstall').addEventListener('click', function () { aboutPane(true); });
+  $('installBack').addEventListener('click', function () { aboutPane(false); });
 
   /* ---------- Levels ---------- */
   var level = 1, clock = 0, last = 0;
