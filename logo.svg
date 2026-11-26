@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 160" role="img" aria-labelledby="t">
+  <title id="t">pause-IT</title>
+  <defs>
+    <linearGradient id="night" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#141329"/><stop offset="1" stop-color="#261d43"/>
+    </linearGradient>
+  </defs>
+  <rect width="520" height="160" rx="28" fill="url(#night)"/>
+  <g transform="translate(24 16) scale(2.6667)">
+    <circle cx="24" cy="24" r="21" fill="none" stroke="#8fe0d6" stroke-width="3"/>
+    <path d="M24 38C9 27.5 8.5 16.5 16 13.6c4-1.5 6.9 1 8 4.2 1.1-3.2 4-5.700 8-4.2C39.500 16.500 39 27.500 24 38z" fill="#ff6996"/>
+    <rect x="18.8" y="18.500" width="3.4" height="10.500" rx=".8" fill="#f6f2fd"/>
+    <rect x="25.800" y="18.500" width="3.4" height="10.500" rx=".8" fill="#f6f2fd"/>
+  </g>
+  <text x="176" y="103" font-family="'Atkinson Hyperlegible', Verdana, Arial, sans-serif" font-size="68" fill="#f6f2fd">pause<tspan fill="#ff8fb0">-</tspan><tspan fill="#8fe0d6" font-weight="700">IT</tspan></text>
+</svg>

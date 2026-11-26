@@ -1,0 +1,1279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>pause-IT</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#141329">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="pause-IT">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: one screen per level, never scrolling. Four tabs on top, a picture that fills the middle,
+   one short sentence under it, and one big button at the bottom. */
+:root {
+  --night: #141329;
+  --dusk: #261d43;
+  --ink: #f6f2fd;
+  --soft: #d5cfea;
+  --ember: #ff8a5c;
+  --flare: #ffc46b;
+  --love: #ff8fb0;
+  --calm: #8fe0d6;
+  --line: rgb(213 207 234 / .4);
+  --text: "Atkinson Hyperlegible", Verdana, "Segoe UI", Arial, sans-serif;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body {
+  margin: 0; overflow: hidden;
+  background: linear-gradient(180deg, var(--night) 0%, var(--dusk) 100%) fixed;
+  background-color: var(--night);
+  color: var(--ink);
+  font-family: var(--text);
+  font-size: 1.125rem;
+  line-height: 1.4;
+}
+button { font-family: var(--text); font-size: 1.125rem; color: var(--ink); }
+#sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.app {
+  position: relative; z-index: 1;
+  height: 100%; max-width: 40rem; margin-inline: auto;
+  padding-block: 10px 12px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 8px;
+}
+.credit { margin: 0; text-align: center; color: var(--soft); font-size: .8125rem; line-height: 1.3; text-wrap: balance; }
+.brand { margin: 0 0 6px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 1.45rem; font-weight: 400; line-height: 1; }
+.brand svg { width: 30px; height: 30px; flex: 0 0 auto; }
+.brand i { font-style: normal; color: var(--love); }
+.brand b { color: var(--calm); }
+.levels { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.lv {
+  display: flex; flex-direction: column; align-items: center; min-width: 0;
+  font-size: 1rem; line-height: 1.15; background: rgb(20 19 41 / .55); cursor: pointer; text-align: center; justify-content: flex-start;
+  border: 1.5px solid var(--line); border-radius: 14px; padding: 5px 2px 7px;
+}
+.lv b { font-size: 1.3rem; }
+.lv[aria-current="true"] { color: #10242a; background: var(--calm); border-color: var(--calm); font-weight: 700; }
+
+.lvl { min-height: 0; min-width: 0; display: grid; gap: 8px; justify-items: center; }
+.lvl > * { max-width: 100%; min-width: 0; }
+#lvl1 { grid-template-rows: minmax(0, 1fr) auto auto auto; }
+#lvl2 { grid-template-rows: auto minmax(0, 1fr) auto auto auto; }
+#lvl3 { grid-template-rows: minmax(0, 1fr) auto auto; }
+#lvl4 { grid-template-rows: minmax(0, 1fr) auto auto; }
+
+:is(.spot, .pause, .chip, .plain, .solid, .lv, .stage, .pick):focus-visible { outline: 3px solid var(--calm); outline-offset: 2px; }
+
+.scene { position: relative; width: 100%; min-height: 0; }
+.words { width: 100%; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.caption {
+  margin: 0; font-weight: 700; font-size: clamp(1.3rem, 5.2vw, 1.8rem);
+  line-height: 1.2; text-wrap: balance; max-width: 24ch; min-height: 2.4em;
+  display: flex; align-items: center; justify-content: center; transition: opacity .3s ease;
+}
+.caption.is-out { opacity: 0; }
+.hint { margin: 0; color: var(--soft); font-size: 1.0625rem; line-height: 1.25; text-wrap: balance; max-width: 34ch; min-height: 2.5em; }
+.hint.loved { color: var(--love); font-weight: 700; }
+
+.solid, .plain { font-weight: 700; border-radius: 16px; padding: 11px 18px; cursor: pointer; line-height: 1.2; }
+.solid { background: var(--calm); color: #10242a; border: 1.5px solid var(--calm); }
+.plain { background: rgb(20 19 41 / .55); border: 1.5px solid var(--line); }
+.next { width: 100%; }
+.btnrow { width: 100%; display: flex; gap: 8px; }
+.btnrow > * { flex: 1 1 0; min-width: 0; }
+#a4go { flex-wrap: wrap; }
+#repeatAll { flex: 1 1 100%; }
+
+/* Level 1 */
+.bodyzone { container-type: size; --fh: min(100cqh, calc(200cqw - 400px)); }
+.figure { position: absolute; top: calc((100cqh - var(--fh)) / 2); left: 50%; transform: translateX(-50%); height: var(--fh); width: calc(var(--fh) / 2); }
+.side {
+  position: absolute; top: 0; bottom: 0; width: calc((100cqw - var(--fh) / 2) / 2 - 8px);
+  display: flex; flex-direction: column; justify-content: space-around;
+}
+.side.l { left: 0; align-items: flex-end; }
+.side.r { right: 0; align-items: flex-start; }
+.chip {
+  background: rgb(20 19 41 / .55); border: 1.5px solid var(--line); border-radius: 14px;
+  padding: 7px 12px; cursor: pointer; line-height: 1.15; font-size: 1.0625rem; max-width: 100%;
+}
+.chip[aria-pressed="true"] { background: var(--flare); border-color: var(--flare); color: #2b1a10; font-weight: 700; }
+.spot { position: absolute; background: transparent; border: 0; border-radius: 12px; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.app.is-busy .spot, .app.is-busy .chip { pointer-events: none; }
+.app.is-busy .side { opacity: .4; }
+
+.act { display: flex; align-items: center; justify-content: center; gap: clamp(18px, 8vw, 48px); width: 100%; padding-top: 6px; }
+.pause {
+  --fill: 0;
+  position: relative; flex: 0 0 auto;
+  width: clamp(104px, 29vw, 132px); aspect-ratio: 1; border-radius: 50%;
+  border: 3px solid rgb(143 224 214 / .85);
+  background: radial-gradient(circle, rgb(255 138 92 / calc(var(--fill) * .30)) 0%, rgb(20 19 41 / .30) 78%);
+  font-weight: 700; font-size: clamp(1.15rem, 4.6vw, 1.4rem); line-height: 1.1; padding: 6px;
+  text-shadow: 0 1px 10px var(--night), 0 0 3px var(--night);
+  box-shadow: 0 0 0 8px rgb(143 224 214 / .08), 0 0 calc(18px + var(--fill) * 60px) rgb(255 138 92 / calc(.08 + var(--fill) * .6));
+  cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.pause::after {
+  content: ""; position: absolute; inset: -10px; border-radius: 50%;
+  border: 1px solid rgb(143 224 214 / .5); animation: invite 3.2s ease-out infinite;
+}
+.pause.is-held { transform: scale(.95); }
+.pause.is-held::after, .pause.is-running::after { animation: none; opacity: 0; }
+@keyframes invite { 0% { transform: scale(.94); opacity: .9; } 100% { transform: scale(1.16); opacity: 0; } }
+.boxwrap { display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--soft); font-size: 1rem; line-height: 1.2; text-align: center; }
+.boxart { display: block; width: clamp(104px, 30vw, 136px); aspect-ratio: 16 / 9; margin-top: 22px; }
+
+/* Level 2 */
+.notnow { display: flex; align-items: center; justify-content: center; gap: clamp(8px, 3vw, 18px); width: 100%; }
+.notnow strong { font-size: 1.125rem; line-height: 1.15; }
+.no { display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: 1rem; line-height: 1.2; }
+.no svg { width: clamp(44px, 13vw, 58px); height: auto; display: block; }
+#scene2 { display: flex; justify-content: center; align-items: flex-start; text-align: center; }
+#cap3 { color: var(--ink); }
+#hint3 { white-space: pre-line; }
+#cap2 { font-size: clamp(1.5rem, 6.4vw, 2.2rem); max-width: 15ch; text-shadow: 0 2px 16px var(--night), 0 0 4px var(--night); }
+.stages { width: 100%; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+#calm2 { color: var(--ink); text-align: center; }
+.stage {
+  min-width: 0; font-size: clamp(.9rem, 3.7vw, 1.0625rem); line-height: 1.15; cursor: pointer;
+  background: rgb(20 19 41 / .6); border: 1.5px solid var(--line); border-radius: 12px; padding: 9px 1px;
+}
+.stage[aria-pressed="true"] { color: #2b1a10; background: var(--flare); border-color: var(--flare); font-weight: 700; }
+
+/* Level 4 */
+.picks { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.pick {
+  min-width: 0; background: rgb(20 19 41 / .6); border: 1.5px solid var(--line); border-radius: 14px;
+  padding: 11px 2px; font-weight: 700; font-size: clamp(1rem, 4.1vw, 1.125rem); cursor: pointer; line-height: 1.15;
+}
+
+@media (max-height: 560px) { body { overflow-y: auto; } .app { height: auto; min-height: 100%; } .scene { min-height: 200px; } }
+@media (prefers-reduced-motion: reduce) { .pause::after { animation: none; } .caption { transition: none; } }
+</style>
+</head>
+<body>
+<canvas id="sky" aria-hidden="true"></canvas>
+
+<main class="app" id="app" data-level="1">
+  <header>
+    <h1 class="brand">
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <circle cx="24" cy="24" r="21" fill="none" stroke="#8fe0d6" stroke-width="3"/>
+        <path d="M24 38C9 27.5 8.5 16.5 16 13.6c4-1.5 6.9 1 8 4.2 1.1-3.2 4-5.7 8-4.2C39.5 16.5 39 27.5 24 38z" fill="#ff6996"/>
+        <rect x="18.8" y="18.5" width="3.4" height="10.5" rx=".8" fill="#f6f2fd"/>
+        <rect x="25.8" y="18.5" width="3.4" height="10.5" rx=".8" fill="#f6f2fd"/>
+      </svg>
+      <span>pause<i>-</i><b>IT</b></span>
+    </h1>
+    <nav class="levels" aria-label="Levels">
+      <button class="lv" id="nav1" type="button" aria-current="true"><b>1</b><span>Stop</span></button>
+      <button class="lv" id="nav2" type="button"><b>2</b><span>You are safe</span></button>
+      <button class="lv" id="nav3" type="button"><b>3</b><span>You are enough</span></button>
+      <button class="lv" id="nav4" type="button"><b>4</b><span>It will be OK</span></button>
+    </nav>
+  </header>
+
+  <!-- Level 1: pounding heart, hold the button, everything goes into the box, love is left -->
+  <section class="lvl" id="lvl1" aria-label="Level 1: stop and move through it">
+    <div class="scene bodyzone">
+      <div class="side l" id="sideL"></div>
+      <div class="figure" id="figure"></div>
+      <div class="side r" id="sideR"></div>
+    </div>
+    <div class="words">
+      <p class="caption" id="caption" aria-live="polite">I know it feels unbearable. We got you.</p>
+      <p class="hint" id="hint">Stop here and let go. Tap where you feel it, then hold the button.</p>
+    </div>
+    <div class="act">
+      <button class="pause" id="pauseBtn" type="button">Hold to pause</button>
+      <div class="boxwrap"><span class="boxart" id="boxArt"></span><span id="boxCount">The box</span></div>
+    </div>
+    <button class="plain next" id="next1" type="button" data-go="2">Go to Level 2</button>
+  </section>
+
+  <!-- Level 2: hands off, you are safe, time carries you past it -->
+  <section class="lvl" id="lvl2" aria-label="Level 2: you are safe, do nothing" hidden>
+    <div class="notnow" role="group" aria-label="Not now: email, texts, social media">
+      <strong>Not<br>now</strong>
+      <span class="no">
+        <svg viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="24" cy="24" r="22" fill="#211c3e" stroke="#d5cfea" stroke-width="1.5"/>
+          <rect x="12" y="15" width="24" height="18" rx="2" stroke="#f6f2fd" stroke-width="2.5"/>
+          <path d="M12 17l12 9 12-9" stroke="#f6f2fd" stroke-width="2.5"/>
+          <path d="M9 39L39 9" stroke="#ff8a5c" stroke-width="4"/>
+        </svg>Email</span>
+      <span class="no">
+        <svg viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="24" cy="24" r="22" fill="#211c3e" stroke="#d5cfea" stroke-width="1.5"/>
+          <path d="M12 14h24v15H21l-7 6v-6h-2z" stroke="#f6f2fd" stroke-width="2.5"/>
+          <path d="M9 39L39 9" stroke="#ff8a5c" stroke-width="4"/>
+        </svg>Texts</span>
+      <span class="no">
+        <svg viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="24" cy="24" r="22" fill="#211c3e" stroke="#d5cfea" stroke-width="1.5"/>
+          <path d="M17 24l14-8M17 24l14 8" stroke="#f6f2fd" stroke-width="2.5"/>
+          <circle cx="15" cy="24" r="4" fill="#f6f2fd"/><circle cx="33" cy="15" r="4" fill="#f6f2fd"/><circle cx="33" cy="33" r="4" fill="#f6f2fd"/>
+          <path d="M9 39L39 9" stroke="#ff8a5c" stroke-width="4"/>
+        </svg>Social</span>
+      <span class="no">
+        <svg viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="24" cy="24" r="22" fill="#211c3e" stroke="#d5cfea" stroke-width="1.5"/>
+          <path d="M17 13c-2 0-3 1-3 3 0 10 8 18 18 18 2 0 3-1 3-3v-3l-6-2-2 3c-3-1-6-4-7-7l3-2-2-6z" stroke="#f6f2fd" stroke-width="2.5"/>
+          <path d="M9 39L39 9" stroke="#ff8a5c" stroke-width="4"/>
+        </svg>Calls</span>
+    </div>
+    <div class="scene" id="scene2">
+      <p class="caption" id="cap2" aria-live="polite">You are safe.</p>
+    </div>
+    <p class="hint" id="calm2" aria-live="polite">Nothing to fix. Nothing to do. You are held, and you are safe.</p>
+    <div class="stages" id="stages" role="group" aria-label="Only if your body wants something to do"></div>
+    <button class="solid next" type="button" data-go="3">Go to Level 3</button>
+  </section>
+
+  <!-- Level 3: your belief about you matters most -->
+  <section class="lvl" id="lvl3" aria-label="Level 3: you are enough" hidden>
+    <div class="scene" id="scene3" role="img" aria-label="You stand in the centre with a heart of light. The people who do not understand stand around you."></div>
+    <div class="words">
+      <p class="caption" id="cap3" aria-live="polite">You are reaching outside to feel okay inside.</p>
+      <p class="hint" id="hint3">It feels like their approval would fix it. It will not.
+But we see you. We get it. We love you.</p>
+    </div>
+    <div class="btnrow">
+      <button class="plain" id="back3" type="button" hidden>Back</button>
+      <button class="solid" id="next3" type="button">Give me space</button>
+    </div>
+  </section>
+
+  <!-- Level 4: park it and go do something else -->
+  <section class="lvl" id="lvl4" aria-label="Level 4: it will be OK. Park it and do something else" hidden>
+    <div class="scene" id="scene4" role="img" aria-label="A quiet parking lot at night under one lamp. You stand beside it with a heart of light."></div>
+    <div class="words">
+      <p class="caption" id="cap4" aria-live="polite">Put all of it in this parking space.</p>
+      <p class="hint loved">Not everyone will see you. We see you. You are loved.</p>
+    </div>
+    <div class="btnrow" id="a4park"><button class="solid" id="parkBtn" type="button">Park it</button></div>
+    <div class="picks" id="picks" hidden></div>
+    <div class="btnrow" id="a4go" hidden>
+      <button class="plain" id="pickAgain" type="button">Pick another</button>
+      <button class="plain" id="parkNew" type="button">Park more</button>
+      <button class="solid" id="repeatAll" type="button">Still overwhelmed? Repeat it</button>
+    </div>
+  </section>
+
+  <footer>
+    <p class="credit">pause-IT &copy; 2026. Created by Dr. Juls Gilliam. Developed for those who are brave enough to still feel in this world.</p>
+  </footer>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var app = $('app'), cv = $('sky'), ctx = cv.getContext('2d');
+  var figure = $('figure'), pauseBtn = $('pauseBtn'), boxArt = $('boxArt');
+  var captionEl = $('caption'), hintEl = $('hint'), boxCount = $('boxCount');
+  var stillMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var FONT = '"Atkinson Hyperlegible", Verdana, Arial, sans-serif';
+
+  function read(key, fallback) {
+    try { var v = JSON.parse(localStorage.getItem(key)); return v === null || v === undefined ? fallback : v; }
+    catch (e) { return fallback; }
+  }
+  function write(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) {} }
+  function rnd(a, b) { return a + Math.random() * (b - a); }
+  function clamp(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
+  function ease(u) { return u < .5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2; }
+  function fade(el, text) {
+    if (el._want === text) return;
+    el._want = text;
+    clearTimeout(el._t);
+    if (stillMotion) { el.textContent = text; return; }
+    el.classList.add('is-out');
+    el._t = setTimeout(function () { el.textContent = text; el.classList.remove('is-out'); }, 280);
+  }
+  function setText(el, text) { if (el._txt !== text) { el._txt = text; el.textContent = text; } }
+
+  /* ---------- Levels ---------- */
+  var level = 1, clock = 0, last = 0;
+  var sections = [null, $('lvl1'), $('lvl2'), $('lvl3'), $('lvl4')];
+  var navs = [null, $('nav1'), $('nav2'), $('nav3'), $('nav4')];
+  function setLevel(n, viaHash) {
+    level = n; holding = false;
+    app.setAttribute('data-level', n);
+    for (var i = 1; i <= 4; i++) {
+      sections[i].hidden = i !== n;
+      navs[i].setAttribute('aria-current', i === n ? 'true' : 'false');
+    }
+    if (n === 2) l2t = 0;
+    if (!viaHash) { try { location.hash = 'level-' + n; } catch (e) {} }
+  }
+  function fromHash() {
+    var m = /^#level-([1234])$/.exec(location.hash || '');
+    var n = m ? +m[1] : 1;
+    if (n !== level) setLevel(n, true);
+  }
+  navs.forEach(function (b, i) { if (b) b.addEventListener('click', function () { setLevel(i); }); });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-go]'), function (b) {
+    b.addEventListener('click', function () { setLevel(+b.getAttribute('data-go')); });
+  });
+  window.addEventListener('hashchange', fromHash);
+
+  /* ---------- Level 1 ---------- */
+  /* Fractions of the figure: x and rx of its width, y and ry of its height. Hit boxes tile the whole body. */
+  var REGIONS = [
+    { id: 'head', label: 'Head', name: 'head', side: 'l', line: 'Let it drain out of your head.', n: 44,
+      spots: [{ x: .5, y: .085, rx: .11, ry: .05 }], hit: [[.28, 0, .44, .14]] },
+    { id: 'throat', label: 'Jaw', name: 'jaw and throat', side: 'r', line: 'Unclench your jaw. Soften your throat.', n: 22,
+      spots: [{ x: .5, y: .168, rx: .07, ry: .022 }], hit: [[.3, .14, .4, .062]] },
+    { id: 'chest', label: 'Chest', name: 'chest', side: 'l', line: 'Let the pressure leave your chest.', n: 64,
+      spots: [{ x: .5, y: .28, rx: .27, ry: .06 }], hit: [[.19, .202, .62, .158]] },
+    { id: 'belly', label: 'Stomach', name: 'stomach', side: 'r', line: 'Let the knot in your stomach undo.', n: 50,
+      spots: [{ x: .5, y: .45, rx: .2, ry: .075 }], hit: [[.2, .36, .6, .22]] },
+    { id: 'hands', label: 'Hands', name: 'arms and hands', side: 'l', line: 'Your hands are busy holding. Good.', n: 48,
+      spots: [{ x: .1, y: .38, rx: .045, ry: .12 }, { x: .9, y: .38, rx: .045, ry: .12 },
+              { x: .06, y: .55, rx: .05, ry: .025 }, { x: .94, y: .55, rx: .05, ry: .025 }],
+      hit: [[-.06, .2, .25, .42], [.81, .2, .25, .42]] },
+    { id: 'legs', label: 'Legs', name: 'legs', side: 'r', line: 'Let the restlessness run down your legs.', n: 52,
+      spots: [{ x: .37, y: .76, rx: .075, ry: .17 }, { x: .63, y: .76, rx: .075, ry: .17 }],
+      hit: [[.2, .58, .3, .42], [.5, .58, .3, .42]] }
+  ];
+  var HOT = ['255,138,92', '255,196,107', '240,86,143'];
+  var GROUP = 2.6;
+  var REST = ['I know it feels unbearable. We got you.', 'Made a mistake already? It is okay. Pause now.'];
+
+  var loud = {};
+  var parts = [];
+  var phase = 'rest';       // rest | gather | hold | release | done
+  var holding = false;
+  var now = 0;              // level 1 story clock: during "gather" it only runs while the button is held
+  var timeline = [];
+  var lid = 0, lidTarget = 0, boxGlow = 0, love1 = 0, beat = 0;
+  var kept = +read('pause.kept.v1', 0) || 0;
+
+  function spawnRegion(reg, fadeIn) {
+    var count = Math.round(reg.n * (loud[reg.id] ? 1.7 : 1));
+    for (var i = 0; i < count; i++) {
+      var a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random());
+      parts.push({
+        reg: reg, spot: reg.spots[i % reg.spots.length],
+        ax: Math.cos(a) * r, ay: Math.sin(a) * r,
+        ph: rnd(0, 6.28), sp: rnd(5, 11), size: rnd(1.4, 3.1),
+        col: HOT[(Math.random() * HOT.length) | 0],
+        state: 'home', born: fadeIn ? clock : -9,
+        launch: null, launch2: null, dur: 1, t0: 0,
+        sx: 0, sy: 0, bend: rnd(-70, 70), ox: rnd(-.5, .5), oy: rnd(-.5, .5),
+        orR: .5, orA: 0, orS: rnd(.5, 1.6) * (Math.random() < .5 ? -1 : 1),
+        bx: rnd(.22, .78), px: null, py: null
+      });
+    }
+  }
+  function spawnAll(fadeIn) { parts = []; REGIONS.forEach(function (r) { spawnRegion(r, fadeIn); }); }
+
+  REGIONS.forEach(function (reg) {
+    reg.pulse = -9;
+    reg.hit.forEach(function (h, hi) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'spot'; b.id = 'spot-' + reg.id + '-' + hi;
+      b.style.left = (h[0] * 100) + '%'; b.style.top = (h[1] * 100) + '%';
+      b.style.width = (h[2] * 100) + '%'; b.style.height = (h[3] * 100) + '%';
+      b.tabIndex = -1; b.setAttribute('aria-hidden', 'true');
+      b.addEventListener('click', function () { toggleLoud(reg); });
+      figure.appendChild(b);
+    });
+    var c = document.createElement('button');
+    c.type = 'button'; c.className = 'chip'; c.id = 'area-' + reg.id; c.textContent = reg.label;
+    c.setAttribute('aria-pressed', 'false');
+    c.addEventListener('click', function () { toggleLoud(reg); });
+    $(reg.side === 'l' ? 'sideL' : 'sideR').appendChild(c);
+    reg.chip = c;
+  });
+
+  function toggleLoud(reg) {
+    if (phase !== 'rest' && phase !== 'done') return;
+    if (phase === 'done') { phase = 'rest'; spawnAll(true); }
+    loud[reg.id] = !loud[reg.id];
+    reg.pulse = clock;
+    parts = parts.filter(function (p) { return p.reg !== reg; });
+    spawnRegion(reg, true);
+    syncChips();
+    var names = loudNames();
+    say(names.length ? 'You feel it in your ' + joinNames(names) + '.' : 'I know it feels unbearable. We got you.');
+    hintEl.textContent = 'Now hold the button down. It keeps your hands safe.';
+  }
+  function syncChips() { REGIONS.forEach(function (r) { r.chip.setAttribute('aria-pressed', loud[r.id] ? 'true' : 'false'); }); }
+  function loudNames() { return REGIONS.filter(function (r) { return loud[r.id]; }).map(function (r) { return r.name; }); }
+  function joinNames(a) { return a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
+  function say(text) { fade(captionEl, text); }
+  function at(t, fn) { timeline.push({ at: t, fn: fn }); timeline.sort(function (a, b) { return a.at - b.at; }); }
+
+  function start() {
+    if (phase !== 'rest' && phase !== 'done') return;
+    var lead = 0.2;
+    if (phase === 'done') { spawnAll(true); lead = 1.6; }
+    phase = 'gather';
+    app.classList.add('is-busy');
+    pauseBtn.classList.add('is-running');
+
+    /* the places you chose go first */
+    var order = REGIONS.filter(function (r) { return loud[r.id]; }).concat(REGIONS.filter(function (r) { return !loud[r.id]; }));
+    var T = now + lead;
+    order.forEach(function (reg, i) {
+      var g = T + i * GROUP;
+      at(g, function () { say(reg.line); reg.pulse = clock; });
+      parts.forEach(function (p) {
+        if (p.reg === reg) { p.launch = g + rnd(.2, GROUP * .65); p.dur = rnd(1.2, 2); }
+      });
+    });
+    var tHold = T + order.length * GROUP + 1.4;
+    at(tHold, function () {
+      phase = 'hold';
+      say('You can let go. The button has all of it.');
+      hintEl.textContent = 'You did not send. You did not post. Well done.';
+    });
+    var tRel = tHold + 4;
+    at(tRel, function () {
+      phase = 'release'; lidTarget = 1;
+      say('Now it pours into the box.');
+      hintEl.textContent = 'It will keep there for a later day.';
+      parts.forEach(function (p) { p.launch2 = now + rnd(.6, 3.2); });
+    });
+    at(tRel + 5, function () { lidTarget = 0; say('The lid is closing.'); });
+    at(tRel + 6.6, finish);
+  }
+
+  function finish() {
+    phase = 'done';
+    parts = [];
+    kept += 1; write('pause.kept.v1', kept); showCount();
+    say('You moved through it. What is left is love.');
+    hintEl.textContent = 'You just managed powerful feelings. Still overwhelmed? Hold again.';
+    app.classList.remove('is-busy');
+    pauseBtn.classList.remove('is-running');
+    $('next1').className = 'solid next';
+    REGIONS.forEach(function (r) { loud[r.id] = false; });
+    syncChips();
+  }
+  function showCount() { boxCount.textContent = kept ? kept + ' kept for later' : 'The box'; }
+
+  /* Holding the button is the way to keep from acting: both hands stay here. */
+  function down(ev) {
+    if (ev && ev.preventDefault && ev.type !== 'keydown') ev.preventDefault();
+    holding = true; pauseBtn.classList.add('is-held');
+    if (phase === 'rest' || phase === 'done') start();
+  }
+  function up() { holding = false; pauseBtn.classList.remove('is-held'); }
+  pauseBtn.addEventListener('pointerdown', function (ev) {
+    try { pauseBtn.setPointerCapture(ev.pointerId); } catch (e) {}
+    down(ev);
+  });
+  pauseBtn.addEventListener('pointerup', up);
+  pauseBtn.addEventListener('pointercancel', up);
+  pauseBtn.addEventListener('lostpointercapture', up);
+  pauseBtn.addEventListener('contextmenu', function (ev) { ev.preventDefault(); });
+  pauseBtn.addEventListener('keydown', function (ev) { if ((ev.key === ' ' || ev.key === 'Enter') && !ev.repeat) down(ev); });
+  pauseBtn.addEventListener('keyup', function (ev) { if (ev.key === ' ' || ev.key === 'Enter') up(); });
+  pauseBtn.addEventListener('blur', up);
+
+  /* ---------- Level 2 ---------- */
+  var STAGE = 13;
+  var STAGES = ['Now', 'Tonight', '1 day', '1 week', '1 month'];
+  var SAFE = ['You are safe.', 'Do not send anything.', 'You are loved.', 'You do not need to do anything.',
+              'This can wait. You are okay.', 'You do not need to fix this.', 'You feel strongly. You can manage your feelings.', 'Made a mistake? It is okay. We got you.', 'There is no rush to resolve this.',
+              'You are safe.', 'You are loved.', 'All will be okay.'];
+  var l2t = 0, qs = 0, stageShown = -1;
+  var cap2 = $('cap2'), scene2 = $('scene2'), stagesEl = $('stages');
+  var CALM = [
+    ['breathe', 'Breathe', 'Breathe in as the ring grows. Out as it shrinks.'],
+    ['feet', 'Feet down', 'Press both feet into the floor. Feel it hold you up.'],
+    ['water', 'Cold water', 'Run cold water over your wrists for one minute.'],
+    ['squeeze', 'Squeeze', 'Squeeze your fists tight. Hold. Then let go.']
+  ];
+  var calm = '', calmEl = $('calm2'), HELD = 'Nothing to fix. Nothing to do. You are held, and you are safe.';
+  var calmBtns = CALM.map(function (c) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'stage'; b.id = 'calm-' + c[0]; b.textContent = c[1];
+    b.setAttribute('aria-pressed', c[0] === calm ? 'true' : 'false');
+    b.addEventListener('click', function () {
+      var on = calm !== c[0];
+      calm = on ? c[0] : ''; calmEl.textContent = on ? c[2] : HELD;
+      calmBtns.forEach(function (x) { x.setAttribute('aria-pressed', on && x === b ? 'true' : 'false'); });
+    });
+    stagesEl.appendChild(b);
+    return b;
+  });
+  var stars = [], lights = [], k;
+  for (k = 0; k < 80; k++) stars.push({ x: Math.random(), y: Math.random(), s: rnd(.5, 1.5), ph: rnd(0, 6.28) });
+  var LCOL = ['255,196,107', '255,150,180', '143,224,214', '255,214,170'];
+  for (k = 0; k < 18; k++) lights.push({ x: Math.random(), y: Math.random(), sp: rnd(.018, .04), sway: rnd(.3, .8), ph: rnd(0, 6.28),
+                                         size: rnd(6, 10), heart: k % 2 === 0, col: LCOL[k % LCOL.length] });
+
+  function heartPath(x, y, s) {
+    ctx.beginPath(); ctx.moveTo(x, y + s * .7);
+    ctx.bezierCurveTo(x - s * 1.5, y - s * .2, x - s * .7, y - s * 1.2, x, y - s * .35);
+    ctx.bezierCurveTo(x + s * .7, y - s * 1.2, x + s * 1.5, y - s * .2, x, y + s * .7);
+  }
+  /* A big love coming out of the body: a glowing heart, rings of hearts spreading out, small hearts rising */
+  function drawLove(x, y, s, amt) {
+    if (amt < .01) return;
+    var i, u, pulse = stillMotion ? 1 : 1 + .07 * Math.sin(clock * 2.2);
+    ctx.globalCompositeOperation = 'lighter';
+    glow(x, y, s * 3.6, '255,110,160', .38 * amt);
+    for (i = 0; i < 3; i++) {
+      u = stillMotion ? (i + 1) / 4 : (clock * .2 + i / 3) % 1;
+      ctx.strokeStyle = 'rgba(255,150,185,' + ((1 - u) * .55 * amt) + ')'; ctx.lineWidth = 2.5;
+      heartPath(x, y, s * (1 + u * 2.8)); ctx.stroke();
+    }
+    for (i = 0; i < 9; i++) {
+      u = stillMotion ? (i + .5) / 9 : (clock * .11 + i / 9) % 1;
+      ctx.fillStyle = 'rgba(255,160,190,' + (Math.sin(Math.PI * u) * .8 * amt) + ')';
+      heartPath(x + Math.sin(i * 2.4 + u * 3) * s * (.7 + u * 1.5), y - u * s * 3.6, s * (.12 + (i % 3) * .05)); ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    var big = s * (.45 + .55 * amt) * pulse;
+    ctx.fillStyle = 'rgba(255,105,150,' + (.92 * amt) + ')'; heartPath(x, y, big); ctx.fill();
+    ctx.fillStyle = 'rgba(255,205,215,' + (.55 * amt) + ')'; heartPath(x, y - big * .05, big * .5); ctx.fill();
+  }
+  /* The pounding heart: fast double beat, pressure rings pushing out of the chest */
+  function drawPound(x, y, s, alpha) {
+    if (alpha < .01) return;
+    var ph = beat % 1, g1 = Math.exp(-Math.pow(ph - .06, 2) / .0025), g2 = Math.exp(-Math.pow(ph - .3, 2) / .004);
+    var sc = stillMotion ? 1.1 : 1 + .26 * g1 + .14 * g2, i;
+    ctx.globalCompositeOperation = 'lighter';
+    glow(x, y, s * (3 + g1), '255,60,80', (.3 + .3 * g1) * alpha);
+    if (!stillMotion) for (i = 0; i < 2; i++) {
+      var u = (ph + i * .5) % 1;
+      ctx.strokeStyle = 'rgba(255,90,100,' + ((1 - u) * .7 * alpha) + ')'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(x, y, s * (1.1 + u * 2.6), 0, 6.2832); ctx.stroke();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(255,66,88,' + (.95 * alpha) + ')'; heartPath(x, y, s * sc); ctx.fill();
+  }
+  function hills(base, a1, f1, a2, f2, off, color) {
+    ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(0, vh);
+    for (var x = 0; x <= vw + 12; x += 12) ctx.lineTo(x, base - a1 * Math.sin(x * f1 + off) - a2 * Math.sin(x * f2 + off * 2));
+    ctx.lineTo(vw, vh); ctx.closePath(); ctx.fill();
+  }
+
+  function drawL2(dt) {
+    l2t += dt;
+    var stage = Math.min(4, Math.floor(l2t / STAGE));
+    fade(cap2, l2t > 5 * STAGE ? 'All will be okay.' : SAFE[Math.floor(l2t / 6.5) % SAFE.length]);
+    var q = clamp(l2t / (4 * STAGE + 4));
+    qs += (q - qs) * Math.min(1, dt * 1.4);
+
+    var s = scene2.getBoundingClientRect();
+    var cx = s.left + s.width / 2, hy = s.bottom - s.height * .08, skyTop = Math.max(0, s.top - 20), i;
+    var m = Math.min(s.width, s.height);
+
+    for (i = 0; i < stars.length; i++) {
+      var st = stars[i], tw = stillMotion ? .7 : .55 + .45 * Math.sin(clock * 1.3 + st.ph);
+      ctx.fillStyle = 'rgba(232,236,255,' + (tw * (.85 - .4 * qs)) + ')';
+      ctx.beginPath(); ctx.arc(st.x * vw, skyTop + st.y * (hy - skyTop - 30), st.s, 0, 6.2832); ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'lighter';
+    var breath = .88 + .12 * Math.sin(clock * .7);
+    glow(cx, hy, Math.max(vw * .65, 320), '255,150,120', qs * .42 * breath);
+    glow(cx, hy + 10, Math.max(vw * .38, 200), '255,214,150', qs * .5 * breath);
+
+    /* The event: huge and hot at first, a small calm star by the end */
+    var e = ease(qs);
+    var r0 = m * .17, r = r0 * Math.pow(2.6 / r0, e);
+    var sx = s.left + s.width * .8, sy = s.top + s.height * .58;
+    var ox = sx + (s.left + s.width * .9 - sx) * e, oy = sy + (s.top + s.height * .34 - sy) * e;
+    var flick = stillMotion ? 1 : 1 + (1 - e) * .07 * Math.sin(clock * 9) * Math.sin(clock * 3.1);
+    var rgb = Math.round(255 + (232 - 255) * e) + ',' + Math.round(112 + (236 - 112) * e) + ',' + Math.round(86 + (255 - 86) * e);
+    glow(ox, oy, r * 2.6 * flick + 6, rgb, .55);
+    ctx.fillStyle = 'rgba(' + rgb + ',.9)'; ctx.beginPath(); ctx.arc(ox, oy, r * flick, 0, 6.2832); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+
+    hills(hy - 6, 14, .006, 7, .013, 1, mix([30, 26, 60], [66, 48, 92], qs));
+    hills(hy + 14, 9, .009, 5, .021, 4, mix([22, 20, 46], [46, 36, 72], qs));
+
+    /* you, safe on the hill, hands empty, love coming out of you */
+    var hh = s.height * .46, px = s.left + s.width * .36, py = hy - hh / 2 + 4;
+    /* the shelter: it holds whether or not you do anything. What happened stays outside it. */
+    var drx = Math.min(hh * .62, px - s.left - 4), dry = hh * 1.16, dby = hy + 6, dpulse = stillMotion ? 1 : 1 + .012 * Math.sin(clock * 1.1);
+    ctx.globalCompositeOperation = 'lighter';
+    var dg = ctx.createRadialGradient(px, dby - dry * .45, 0, px, dby - dry * .45, dry);
+    dg.addColorStop(0, 'rgba(255,214,150,.26)'); dg.addColorStop(1, 'rgba(255,214,150,.03)');
+    ctx.fillStyle = dg; ctx.beginPath(); ctx.ellipse(px, dby, drx * dpulse, dry * dpulse, 0, Math.PI, 6.2832); ctx.fill();
+    if (e < .9) {
+      var dth = Math.atan2((oy - dby) / dry, (ox - px) / drx);
+      glow(px + drx * Math.cos(dth), dby + dry * Math.sin(dth), 22, '255,120,90', .75 * (1 - e) * (stillMotion ? 1 : .6 + .4 * Math.sin(clock * 8)));
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = 'rgba(255,224,170,.16)'; ctx.lineWidth = 12;
+    ctx.beginPath(); ctx.ellipse(px, dby, drx * dpulse, dry * dpulse, 0, Math.PI, 6.2832); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,224,170,.95)'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.ellipse(px, dby, drx * dpulse, dry * dpulse, 0, Math.PI, 6.2832); ctx.stroke();
+    person(px, py, hh, mix([58, 122, 140], [120, 205, 196], qs), 1);
+    drawLove(px, py - hh * .2, hh * .13, .45 + .55 * qs);
+
+    /* something for your body to do instead */
+    var cu, hy0 = py + hh * .05, fyb = py + hh * .47;
+    ctx.font = '700 ' + Math.max(17, Math.round(hh * .1)) + 'px ' + FONT;
+    if (calm === 'breathe') {
+      cu = (clock % 10) / 10; var inh = cu < .4, br = stillMotion ? .6 : inh ? ease(cu / .4) : 1 - ease((cu - .4) / .6);
+      ctx.strokeStyle = 'rgba(143,224,214,.95)'; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(px, py - hh * .2, hh * (.2 + .3 * br), 0, 6.2832); ctx.stroke();
+      ctx.fillStyle = '#8fe0d6'; ctx.fillText(stillMotion ? 'In 4, out 6' : inh ? 'In' : 'Out', px, py - hh * .2 - hh * (.2 + .3 * br) - 14);
+    } else if (calm === 'feet') {
+      for (i = 0; i < 3; i++) {
+        cu = stillMotion ? (i + 1) / 4 : (clock * .35 + i / 3) % 1;
+        ctx.strokeStyle = 'rgba(143,224,214,' + (1 - cu) + ')'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.ellipse(px, fyb, hh * (.14 + .4 * cu), hh * (.025 + .07 * cu), 0, 0, 6.2832); ctx.stroke();
+      }
+      ctx.globalCompositeOperation = 'lighter'; glow(px, fyb, hh * .3, '143,224,214', .5); ctx.globalCompositeOperation = 'source-over';
+    } else if (calm === 'water') {
+      ctx.globalCompositeOperation = 'lighter';
+      glow(px - hh * .22, hy0, hh * .16, '120,190,255', .7); glow(px + hh * .22, hy0, hh * .16, '120,190,255', .7);
+      ctx.globalCompositeOperation = 'source-over';
+      for (i = 0; i < 10; i++) {
+        cu = stillMotion ? (i + .5) / 10 : (clock * .9 + i / 10) % 1;
+        ctx.fillStyle = 'rgba(150,210,255,' + (.95 - cu * .4) + ')';
+        ctx.beginPath(); ctx.ellipse(px + (i % 2 ? 1 : -1) * hh * .22 + Math.sin(i * 3) * 7, hy0 - hh * .34 + cu * hh * .34, 3, 6.5, 0, 0, 6.2832); ctx.fill();
+      }
+    } else if (calm === 'squeeze') {
+      cu = (clock % 8) / 8; var tight = stillMotion || cu < .6, sq = tight ? hh * .07 : hh * (.07 + .12 * ((cu - .6) / .4));
+      ctx.strokeStyle = tight ? 'rgba(255,196,107,.95)' : 'rgba(143,224,214,' + (1 - (cu - .6) / .4) + ')'; ctx.lineWidth = tight ? 6 : 3;
+      ctx.beginPath(); ctx.arc(px - hh * .22, hy0, sq, 0, 6.2832); ctx.stroke();
+      ctx.beginPath(); ctx.arc(px + hh * .22, hy0, sq, 0, 6.2832); ctx.stroke();
+      ctx.fillStyle = tight ? '#ffc46b' : '#8fe0d6'; ctx.fillText(tight ? 'Squeeze' : 'Let go', px, py - hh * .62);
+    }
+
+    ctx.globalCompositeOperation = 'lighter';
+    for (i = 0; i < lights.length; i++) {
+      var l = lights[i];
+      l.y += dt * l.sp * (stillMotion ? .4 : 1); if (l.y > 1) { l.y -= 1; l.x = Math.random(); }
+      var lx = l.x * vw + Math.sin(clock * l.sway + l.ph) * 16, ly = hy - l.y * (hy - skyTop);
+      var la = Math.sin(Math.PI * l.y) * (.3 + .7 * qs);
+      glow(lx, ly, l.size * 3.4, l.col, la * .35);
+      ctx.fillStyle = 'rgba(' + l.col + ',' + (la * .9) + ')';
+      if (l.heart) { heartPath(lx, ly, l.size * .8); ctx.fill(); } else { ctx.beginPath(); ctx.arc(lx, ly, l.size * .32, 0, 6.2832); ctx.fill(); }
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  /* ---------- Level 3 ---------- */
+  var S3 = [
+    { cap: 'You are reaching outside to feel okay inside.', hint: 'It feels like their approval would fix it. It will not.\nBut we see you. We get it. We love you.', btn: 'Give me space' },
+    { cap: 'This is not about them. It is about you.', hint: 'Not everyone will see you. We see you. You are not alone.', btn: 'Next' },
+    { cap: 'The outside world cannot fix how you feel inside.', hint: 'Reaching for it makes it worse. The fix is within you.', btn: 'Come back to me' },
+    { cap: 'Still standing. You are safe.', hint: 'What you need is already inside you.', btn: 'Next' },
+    { cap: 'Rejection hurts like a real wound.', hint: 'That sting is an alarm in your body. It is loud, and it passes.', btn: 'Let it move' },
+    { cap: 'Do not fight it. Let it pass through you.', hint: 'Hand on your chest. Breathe out slowly. Watch it go.', btn: 'Next' },
+    { cap: 'Being told no does not change your worth.', hint: 'It was one moment. You are still whole, and you moved through it.', btn: 'Next' },
+    { cap: 'There is nothing wrong with you.', hint: 'Not everyone feels this much. You feel strongly, and you can manage it.', btn: 'Next' },
+    { cap: 'What you do is what matters.', hint: 'Their feelings about you will not change anything.', btn: 'Next' },
+    { cap: 'What you believe about you matters most.', hint: 'It is the one you live inside every day.', btn: 'Next' },
+    { cap: 'You cannot make others love you.', hint: 'We got you, and we love you. Now you need to love you.', btn: 'Next' },
+    { cap: 'The heaviest judgement is your own.', hint: 'Feel how it sits on you. You can set it down.', btn: 'Set it down' },
+    { cap: 'You are worthy of love.', hint: 'This is you, loved by you. Nothing to fix. Nothing to prove.', btn: 'How to keep it true' },
+    { cap: 'Say one true thing about you out loud.', hint: 'Way 1 of 5. Borrow one from above your head.', btn: 'Next' },
+    { cap: 'Stay close to the people who get you.', hint: 'Way 2 of 5. Spend your words on them.', btn: 'Next' },
+    { cap: 'Keep one small promise to yourself today.', hint: 'Way 3 of 5. Small is enough.', btn: 'Next' },
+    { cap: 'Notice one thing you did right.', hint: 'Way 4 of 5. Pausing counts.', btn: 'Next' },
+    { cap: 'Talk to yourself like someone you love.', hint: 'Way 5 of 5. You are worthy of love, exactly as you are.', btn: 'Go to Level 4' }
+  ];
+  var TRUE_WORDS = ['I care deeply', 'I keep trying', 'I paused', 'I am worth understanding', 'I am more than one hard moment'];
+  var step3 = 0, back = 0, strength = 0, cut = 0, jw = 0, selfLove = 0, rej = 0, pass = 0;
+  var scene3 = $('scene3'), cap3 = $('cap3'), hint3 = $('hint3'), next3 = $('next3'), back3 = $('back3');
+  function show3() {
+    var st = S3[step3];
+    fade(cap3, st.cap); hint3.textContent = st.hint; next3.textContent = st.btn;
+    back3.hidden = step3 === 0;
+  }
+  next3.addEventListener('click', function () {
+    if (step3 === S3.length - 1) { step3 = 0; show3(); setLevel(4); return; }
+    step3++; show3();
+  });
+  back3.addEventListener('click', function () { if (step3 > 0) { step3--; show3(); } });
+
+  var OTHERS = [];
+  for (k = 0; k < 8; k++) OTHERS.push({ a: (k / 8) * 6.2832 + .3, wob: rnd(0, 6.28), far: rnd(.92, 1.08) });
+
+  /* Draw a line of text; if it is wider than the space, break it into two lines so nothing is cut off. */
+  function fitText(text, x, y, maxW) {
+    if (ctx.measureText(text).width <= maxW) { ctx.fillText(text, x, y); return; }
+    var words = text.split(' '), best = 1, bestW = 1e9, i, w;
+    for (i = 1; i < words.length; i++) {
+      w = Math.max(ctx.measureText(words.slice(0, i).join(' ')).width, ctx.measureText(words.slice(i).join(' ')).width);
+      if (w < bestW) { bestW = w; best = i; }
+    }
+    var lh = parseFloat(ctx.font.match(/([\d.]+)px/)[1]) * 1.15;
+    ctx.fillText(words.slice(0, best).join(' '), x, y);
+    ctx.fillText(words.slice(best).join(' '), x, y + lh);
+  }
+  function person(x, y, h, color, alpha) {
+    ctx.globalAlpha = alpha; drawBody(x - h / 4, y - h / 2, h / 2, h, color); ctx.globalAlpha = 1;
+  }
+
+  /* A figure that can move: angles are measured from hanging straight down, opening outward. */
+  function limb(x, y, a1, a2, L, w, side) {
+    var ex = x + side * Math.sin(a1) * L, ey = y + Math.cos(a1) * L;
+    var hx = ex + side * Math.sin(a2) * L, hy = ey + Math.cos(a2) * L;
+    ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(ex, ey); ctx.lineTo(hx, hy); ctx.stroke();
+    return [hx, hy];
+  }
+  function drawFig(cx, footY, H, color, P) {
+    var oy = footY - H * .4 + P.bob, l, r;
+    ctx.save(); ctx.translate(cx, oy); ctx.rotate(P.lean);
+    ctx.fillStyle = color; ctx.strokeStyle = color; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    limb(-H * .06, 0, P.ll, P.lk, H * .2, H * .1, -1); limb(H * .06, 0, P.rl, P.rk, H * .2, H * .1, 1);
+    ctx.lineWidth = H * .05; ctx.beginPath();
+    ctx.moveTo(-H * .15, -H * .345); ctx.lineTo(H * .15, -H * .345); ctx.lineTo(H * .1, 0); ctx.lineTo(-H * .1, 0); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    line(0, -H * .36, 0, -H * .43, H * .08);
+    ctx.beginPath(); ctx.arc(0, -H * .485, H * .066, 0, 6.2832); ctx.fill();
+    if (P.mouth > 0) { ctx.fillStyle = '#141329'; ctx.beginPath(); ctx.ellipse(0, -H * .462, H * .022, H * .03 * P.mouth, 0, 0, 6.2832); ctx.fill(); ctx.fillStyle = color; }
+    l = limb(-H * .18, -H * .335, P.la, P.le, H * .17, H * .0625, -1);
+    r = limb(H * .18, -H * .335, P.ra, P.re, H * .17, H * .0625, 1);
+    ctx.restore();
+    return { l: [cx + l[0], oy + l[1]], r: [cx + r[0], oy + r[1]] };
+  }
+
+  function drawL3(dt) {
+    back += ((step3 > 0 ? 1 : 0) - back) * Math.min(1, dt * 1.1);
+    rej += ((step3 === 4 || step3 === 5 ? 1 : 0) - rej) * Math.min(1, dt * 2.5);
+    pass = step3 === 5 ? Math.min(1, pass + dt / 4) : step3 > 5 ? 1 : 0;
+    strength += (clamp((step3 - 2) / 15) - strength) * Math.min(1, dt * 2);
+    jw += ((step3 === 11 ? 1 : 0) - jw) * Math.min(1, dt * 1.6);
+    selfLove += ((step3 >= 12 ? 1 : 0) - selfLove) * Math.min(1, dt * 1.1);
+    cut = step3 >= 3 ? Math.min(1, cut + dt / 1.1) : 0;
+    var s = scene3.getBoundingClientRect();
+    var cx = s.left + s.width / 2, cy = s.top + s.height * .54, m = Math.min(s.width, s.height), i;
+    var b = ease(clamp(back));
+    ctx.save(); ctx.beginPath(); ctx.rect(0, s.top, vw, s.height); ctx.clip();
+
+    /* your own belief: a ring of light that grows stronger with each step */
+    var ring = m * (.27 + .09 * strength) * (1 + (stillMotion ? 0 : .02 * Math.sin(clock * 1.1)));
+    ctx.globalCompositeOperation = 'lighter';
+    glow(cx, cy, ring * 1.9, '255,196,107', .16 + .34 * strength + .1 * b);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = 'rgba(143,224,214,' + (.3 + .5 * b) + ')'; ctx.lineWidth = 2 + 2 * strength;
+    ctx.beginPath(); ctx.arc(cx, cy, ring, 0, 6.2832); ctx.stroke();
+
+    /* people who do not understand: crowding at first, then far away and faint */
+    for (i = 0; i < OTHERS.length; i++) {
+      var o = OTHERS[i];
+      var near = m * .4 + (stillMotion ? 0 : Math.sin(clock * 2.2 + o.wob) * 4);
+      var fx2 = Math.cos(o.a) * (near + (s.width * .5 * o.far - near) * b);
+      var fy2 = Math.sin(o.a) * (near * .78 + (s.height * .47 * o.far - near * .78) * b);
+      var ph = m * (.3 - .13 * b), px = cx + fx2, py = cy + fy2;
+      if (cut < 1) {            /* the string of "I need their approval": it looks like it holds you up; it does not */
+        var k0 = ease(cut), ax = px + (cx - px) * k0, ay = py - ph * .2 + (cy - m * .11 - py + ph * .2) * k0;   /* your reaching comes back into you */
+        ctx.strokeStyle = 'rgba(255,196,107,' + (.85 * (1 - cut)) + ')'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+        ctx.setLineDash([2, 7]); ctx.beginPath(); ctx.moveTo(cx, cy - m * .11); ctx.lineTo(ax, ay); ctx.stroke(); ctx.setLineDash([]);
+      }
+      person(px, py, ph, '#77719a', .92 - .66 * b);
+      if (b < .95) {            /* their noise, aimed at you, stopped by the ring */
+        var dx = cx - px, dy = cy - py, d = Math.sqrt(dx * dx + dy * dy) || 1, ux = dx / d, uy = dy / d;
+        ctx.strokeStyle = 'rgba(240,86,143,' + (.75 * (1 - b)) + ')'; ctx.lineWidth = 1.8; ctx.lineCap = 'round';
+        ctx.beginPath();
+        var sx0 = px + ux * ph * .3, sy0 = py + uy * ph * .3 - ph * .28, len = Math.max(0, d - ring - ph * .3) * .7;
+        ctx.moveTo(sx0, sy0);
+        for (var j = 1; j <= 5; j++) {
+          var z = (j % 2 ? 1 : -1) * 4 * (stillMotion ? 1 : Math.sin(clock * 6 + i + j));
+          ctx.lineTo(sx0 + ux * len * j / 5 - uy * z, sy0 + uy * len * j / 5 + ux * z);
+        }
+        ctx.stroke();
+      }
+    }
+
+    /* people who get you: close and warm */
+    var fa = step3 >= 1 ? clamp(drawL3.fa + dt * 1.2) : clamp(drawL3.fa - dt * 2); drawL3.fa = fa;
+    if (fa > .01) for (i = 0; i < 2; i++) {
+      var gx = cx + (i ? 1 : -1) * m * .34, gy = cy + m * .06;
+      ctx.globalCompositeOperation = 'lighter'; glow(gx, gy, m * .22, '255,170,150', .25 * fa); ctx.globalCompositeOperation = 'source-over';
+      person(gx, gy, m * .38, '#e9a47a', fa);
+      drawLove(gx, gy - m * .075, m * .035, fa * .8);
+    }
+
+    /* you, with love coming out of you */
+    if (cut < 1 && step3 < 4) {            /* say what the strings are */
+      ctx.font = '700 ' + Math.max(16, Math.round(m * .058)) + 'px ' + FONT;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgba(255,196,107,' + (1 - cut) + ')';
+      fitText('reaching outside for approval', cx, s.top + Math.max(14, m * .05), s.width - 8);
+    }
+    var yy = cy + jw * m * .03 - selfLove * m * .03, t3;
+    if (selfLove > .01) {            /* without your own judgement: light pours out of you */
+      ctx.globalCompositeOperation = 'lighter';
+      glow(cx, yy, m * .62, '255,224,170', .38 * selfLove);
+      ctx.strokeStyle = 'rgba(255,224,170,' + (.26 * selfLove) + ')'; ctx.lineCap = 'round';
+      for (i = 0; i < 12; i++) {
+        t3 = i * .5236 + (stillMotion ? 0 : clock * .08);
+        line(cx + Math.cos(t3) * m * .21, yy + Math.sin(t3) * m * .21, cx + Math.cos(t3) * m * (.4 + .05 * Math.sin(clock + i)), yy + Math.sin(t3) * m * (.4 + .05 * Math.sin(clock + i)), 3);
+      }
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    var c0 = [58 + 62 * strength, 122 + 83 * strength, 140 + 56 * strength], jd = jw * .7;
+    c0 = [c0[0] + (52 - c0[0]) * jd, c0[1] + (60 - c0[1]) * jd, c0[2] + (84 - c0[2]) * jd];
+    person(cx, yy, m * .56, mix(c0, [214, 246, 236], selfLove * .8), 1);
+    drawLove(cx, yy - m * .112, m * (.075 + .05 * strength + .05 * selfLove), clamp(.3 + .25 * cut + .45 * strength - .4 * jw + selfLove));
+    if (jw > .01) {            /* your own judgement: a storm over your head and stones on your shoulders */
+      var coming = step3 === 11, lift = (1 - jw) * m * .16, fall = (1 - jw) * m * (coming ? -.25 : .3);
+      ctx.globalAlpha = jw;
+      ctx.fillStyle = '#3a3552';
+      rr(cx - m * .155 - (coming ? 0 : fall * .5), yy - m * .255 + fall, m * .11, m * .065, 8); ctx.fill();
+      rr(cx + m * .045 + (coming ? 0 : fall * .5), yy - m * .255 + fall, m * .11, m * .065, 8); ctx.fill();
+      var cy3 = yy - m * .41 - lift;
+      ctx.fillStyle = '#2c2745';
+      for (i = 0; i < 5; i++) { ctx.beginPath(); ctx.arc(cx + (i - 2) * m * .07, cy3 + (i % 2 ? -1 : 1) * m * .018, m * .068, 0, 6.2832); ctx.fill(); }
+      ctx.strokeStyle = 'rgba(240,86,143,.85)'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+      for (i = 0; i < 5; i++) {
+        var jx = cx + (i - 2) * m * .06; ctx.beginPath(); ctx.moveTo(jx, cy3 + m * .05);
+        for (var j3 = 1; j3 <= 4; j3++) ctx.lineTo(jx + (j3 % 2 ? 1 : -1) * 4 * (stillMotion ? 1 : Math.sin(clock * 7 + i + j3)), cy3 + m * .05 + j3 * m * .022);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    if (step3 === 5 && !stillMotion) {            /* breathing out */
+      var bu = (clock * .25) % 1;
+      ctx.strokeStyle = 'rgba(143,224,214,' + ((1 - bu) * .6) + ')'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(cx, yy - m * .11, m * (.1 + bu * .34), 0, 6.2832); ctx.stroke();
+    }
+    if (rej > .01 && pass < 1) {            /* the sting of rejection: sharp in the chest, then it travels through and out */
+      var ep = ease(pass), stx = cx + ep * m * .6, sty = yy - m * .11 - ep * m * .12, sal = rej * (1 - pass), g3, q3;
+      var sr = m * .075 * (1 - .55 * pass) * (stillMotion ? 1 : 1 + .16 * Math.sin(clock * 11) * (1 - pass));
+      ctx.globalCompositeOperation = 'lighter'; glow(stx, sty, sr * 3.2, '255,60,80', .55 * sal); ctx.globalCompositeOperation = 'source-over';
+      for (g3 = 2; g3 >= 0; g3--) {
+        var gxs = stx - g3 * ep * m * .09, gal = sal * (g3 ? .25 : 1);
+        ctx.fillStyle = 'rgba(255,66,88,' + gal + ')'; ctx.beginPath();
+        for (q3 = 0; q3 < 16; q3++) {
+          var qa = q3 * .3927 + (stillMotion ? 0 : clock * .6), qr = q3 % 2 ? sr * .45 : sr;
+          ctx.lineTo(gxs + Math.cos(qa) * qr, sty + Math.sin(qa) * qr);
+        }
+        ctx.closePath(); ctx.fill();
+      }
+    }
+    /* true words to borrow, above your head */
+    if (step3 === 3 || step3 === 6) {            /* said plainly, in the picture too */
+      ctx.font = '700 ' + Math.max(20, Math.round(m * .1)) + 'px ' + FONT;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgba(143,224,214,' + clamp(cut * 1.5) + ')';
+      ctx.fillText(step3 === 3 ? 'You are safe' : 'You are enough', cx, s.top + Math.max(18, m * .08));
+    }
+    if (step3 === 12) {
+      ctx.font = '700 ' + Math.max(20, Math.round(m * .1)) + 'px ' + FONT;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgba(255,170,195,' + clamp(selfLove * 1.3) + ')';
+      ctx.fillText('Loved by you', cx, s.top + Math.max(18, m * .08));
+    }
+    if (step3 >= 13) {
+      var wi = Math.floor(clock / 3.2) % TRUE_WORDS.length, wu = (clock / 3.2) % 1;
+      ctx.font = '700 ' + Math.max(17, Math.round(m * .075)) + 'px ' + FONT;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgba(255,214,140,' + (stillMotion ? 1 : Math.min(1, Math.sin(Math.PI * wu) * 2.2)) + ')';
+      fitText(TRUE_WORDS[wi], cx, s.top + Math.max(16, m * .07), s.width - 8);
+    }
+    ctx.restore();
+  }
+  drawL3.fa = 0;
+
+  /* ---------- Level 4 ---------- */
+  var ACTS = [
+    ['walk', 'Walk', 'Go for a walk. It will keep.'],
+    ['sing', 'Sing', 'Sing one whole song, loud or soft.'],
+    ['play', 'Play music', 'Go play. It does not have to sound good.'],
+    ['dance', 'Dance', 'Put on one song and move.'],
+    ['outside', 'Go outside', 'Step outside. Feel the air on your face.'],
+    ['make', 'Make art', 'Make something with your hands.']
+  ];
+  var scene4 = $('scene4'), cap4 = $('cap4'), pa = 0, parked = false, activity = null, away = 0;
+  var a4park = $('a4park'), picks = $('picks'), a4go = $('a4go');
+  function show4() {
+    a4park.hidden = parked; picks.hidden = !parked || !!activity; a4go.hidden = !activity;
+    fade(cap4, !parked ? 'Put all of it in this parking space.' : !activity ? 'Parked. Now go do something else.' : activity[2]);
+  }
+  $('parkBtn').addEventListener('click', function () { parked = true; show4(); });
+  ACTS.forEach(function (a) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'pick'; b.id = 'pick-' + a[0]; b.textContent = a[1];
+    b.addEventListener('click', function () { activity = a; show4(); });
+    picks.appendChild(b);
+  });
+  $('repeatAll').addEventListener('click', function () { activity = null; parked = false; pa = 0; show4(); setLevel(1); });
+  $('pickAgain').addEventListener('click', function () { activity = null; show4(); });
+  $('parkNew').addEventListener('click', function () { activity = null; parked = false; pa = 0; show4(); });
+
+  function drawL4(dt) {
+    pa = parked ? Math.min(1, pa + dt / 2.6) : 0;
+    away += ((activity ? 1 : 0) - away) * Math.min(1, dt * 1.2);
+    var act = activity ? activity[0] : '';
+    var s = scene4.getBoundingClientRect();
+    var m = Math.min(s.width, s.height), gy = s.top + s.height * .68, gh = s.bottom - gy, i, u;
+    ctx.save(); ctx.beginPath(); ctx.rect(0, s.top, vw, s.height); ctx.clip();
+
+    for (i = 0; i < 40; i++) {
+      var st = stars[i];
+      ctx.fillStyle = 'rgba(232,236,255,' + (stillMotion ? .6 : .45 + .35 * Math.sin(clock * 1.3 + st.ph)) + ')';
+      ctx.beginPath(); ctx.arc(st.x * vw, s.top + st.y * (gy - s.top - 16), st.s, 0, 6.2832); ctx.fill();
+    }
+    /* the lot */
+    ctx.fillStyle = '#1d1b38'; ctx.fillRect(0, gy, vw, gh);
+    var x0 = s.left + s.width * .12, bayW = s.width * .16;
+    ctx.strokeStyle = 'rgba(246,242,253,.55)'; ctx.lineCap = 'round';
+    for (i = 0; i < 4; i++) line(x0 + i * bayW + 10, gy + 8, x0 + i * bayW - 6, s.bottom - 8, 3);
+    /* the lamp that keeps watch */
+    var lx = s.left + s.width * .06, lt = s.top + s.height * .16;
+    ctx.strokeStyle = '#5b567c'; line(lx, gy, lx, lt, 4); line(lx, lt, lx + 26, lt, 4);
+    ctx.globalCompositeOperation = 'lighter';
+    glow(lx + 28, lt + 4, s.height * .95, '255,214,150', .2);
+    glow(lx + 28, lt + 4, 16, '255,236,200', .9);
+    ctx.globalCompositeOperation = 'source-over';
+    /* the P sign */
+    var pz = Math.max(28, m * .14), pxs = x0 + bayW * 2.5 - pz / 2, pys = s.top + s.height * .2;
+    ctx.strokeStyle = '#5b567c'; line(pxs + pz / 2, pys + pz, pxs + pz / 2, gy, 3);
+    ctx.fillStyle = '#3b7887'; rr(pxs, pys, pz, pz, 6); ctx.fill();
+    ctx.fillStyle = '#f6f2fd'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '700 ' + Math.round(pz * .7) + 'px ' + FONT; ctx.fillText('P', pxs + pz / 2, pys + pz * .54);
+
+    if (act === 'outside' && away > .01) {            /* outside: morning sky, sun, hills, trees, grass, flowers, birds */
+      var nx, nf, sway = stillMotion ? 0 : Math.sin(clock * 1.3);
+      function frac(n) { var v = Math.sin(n * 12.9898) * 43758.5453; return v - Math.floor(v); }
+      ctx.globalAlpha = away;
+      var ng = ctx.createLinearGradient(0, s.top, 0, gy);
+      ng.addColorStop(0, '#2b3f7a'); ng.addColorStop(.62, '#e08f95'); ng.addColorStop(1, '#ffd08a');
+      ctx.fillStyle = ng; ctx.fillRect(0, s.top, vw, gy - s.top + 2);
+      ctx.globalCompositeOperation = 'lighter'; glow(s.left + s.width * .3, gy - 6, s.height * .55, '255,220,150', .55 * away); ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = '#ffe9b8'; ctx.beginPath(); ctx.arc(s.left + s.width * .3, gy - 4, m * .11, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = '#3f7d6a'; ctx.beginPath(); ctx.moveTo(0, gy + 2);
+      for (nx = 0; nx <= vw + 12; nx += 12) ctx.lineTo(nx, gy - 22 - 16 * Math.sin(nx * .012 + 1) - 8 * Math.sin(nx * .03));
+      ctx.lineTo(vw, gy + 2); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#2f6b4f'; ctx.fillRect(0, gy, vw, gh);
+      ctx.fillStyle = '#3d8560'; ctx.fillRect(0, gy + gh * .5, vw, gh * .5);
+      for (i = 0; i < 3; i++) {            /* trees */
+        var tx0 = s.left + s.width * [.1, .27, .5][i], th = s.height * [.34, .24, .2][i], tb = gy + gh * [.3, .12, .06][i];
+        ctx.strokeStyle = '#5a4030'; ctx.lineCap = 'round'; line(tx0, tb, tx0 + sway * 1.5, tb - th * .55, th * .09);
+        ctx.fillStyle = ['#2e7d5b', '#3a8f66', '#2e7d5b'][i];
+        ctx.beginPath(); ctx.arc(tx0 + sway * 3, tb - th * .72, th * .3, 0, 6.2832); ctx.fill();
+        ctx.beginPath(); ctx.arc(tx0 - th * .2 + sway * 2.5, tb - th * .58, th * .23, 0, 6.2832); ctx.fill();
+        ctx.beginPath(); ctx.arc(tx0 + th * .2 + sway * 2.5, tb - th * .58, th * .23, 0, 6.2832); ctx.fill();
+        ctx.fillStyle = '#4aa878'; ctx.beginPath(); ctx.arc(tx0 - th * .06 + sway * 3, tb - th * .8, th * .16, 0, 6.2832); ctx.fill();
+      }
+      ctx.strokeStyle = '#58b383'; ctx.lineWidth = 2.5;            /* grass */
+      for (i = 0; i < 46; i++) {
+        nx = frac(i + 1) * vw; nf = gy + gh * (.25 + frac(i + 60) * .75);
+        ctx.beginPath(); ctx.moveTo(nx, nf); ctx.quadraticCurveTo(nx + sway * 3, nf - 8, nx + sway * 6 + (i % 2 ? 3 : -3), nf - 15); ctx.stroke();
+      }
+      for (i = 0; i < 11; i++) {            /* flowers */
+        nx = s.left + frac(i + 200) * s.width; nf = gy + gh * (.45 + frac(i + 300) * .5);
+        ctx.strokeStyle = '#58b383'; line(nx, nf, nx + sway * 2, nf - 16, 2.5);
+        ctx.fillStyle = ['#ff8fb0', '#ffc46b', '#f6f2fd', '#c9a6ff'][i % 4];
+        for (var pe = 0; pe < 5; pe++) { ctx.beginPath(); ctx.arc(nx + sway * 2 + Math.cos(pe * 1.2566) * 4.5, nf - 18 + Math.sin(pe * 1.2566) * 4.5, 3.4, 0, 6.2832); ctx.fill(); }
+        ctx.fillStyle = '#ffdf7a'; ctx.beginPath(); ctx.arc(nx + sway * 2, nf - 18, 2.6, 0, 6.2832); ctx.fill();
+      }
+      ctx.strokeStyle = '#2b2a4a'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';            /* birds */
+      for (i = 0; i < 3; i++) {
+        var bxn = s.left + ((clock * (18 + i * 5) + i * 130) % (s.width + 60)) - 30, byn = s.top + s.height * (.12 + i * .07), fl = stillMotion ? 4 : 3 + 4 * Math.abs(Math.sin(clock * 5 + i));
+        ctx.beginPath(); ctx.moveTo(bxn - 9, byn - fl); ctx.quadraticCurveTo(bxn - 4, byn - fl - 3, bxn, byn); ctx.quadraticCurveTo(bxn + 4, byn - fl - 3, bxn + 9, byn - fl); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    /* you, actually doing the thing you picked */
+    var hh = s.height * .5, ux = s.left + s.width * (.76 - .12 * away), footY = gy + gh * .35, t = stillMotion ? .4 : clock, sw;
+    var P = { la: .18, le: .1, ra: .18, re: .1, ll: 0, lk: 0, rl: 0, rk: 0, lean: 0, bob: 0, mouth: 0 };
+    if (act === 'walk') {
+      sw = Math.sin(t * 5);
+      P.ll = .5 * Math.max(0, sw); P.lk = -.55 * Math.max(0, sw); P.rl = .5 * Math.max(0, -sw); P.rk = -.55 * Math.max(0, -sw);
+      P.la = .15 + .5 * Math.max(0, -sw); P.le = P.la + .5; P.ra = .15 + .5 * Math.max(0, sw); P.re = P.ra + .5;
+      P.bob = -Math.abs(sw) * hh * .02;
+    } else if (act === 'sing') {
+      P.la = 1.9 + .15 * Math.sin(t * 2); P.le = 2.3 + .2 * Math.sin(t * 2 + 1); P.ra = .3; P.re = -2.4;
+      P.lean = .06 * Math.sin(t * 1.5); P.mouth = .6 + .4 * Math.sin(t * 6);
+    } else if (act === 'play') {
+      P.la = 1.1; P.le = 2; P.ra = .35; P.re = -.9 + .3 * Math.sin(t * 10); P.bob = Math.sin(t * 5) * hh * .008;
+    } else if (act === 'dance') {
+      sw = Math.sin(t * 6);
+      P.la = 2.1 + .7 * sw; P.le = P.la + .6 * Math.cos(t * 6); P.ra = 2.1 - .7 * sw; P.re = P.ra - .6 * Math.cos(t * 6);
+      P.ll = .4 * Math.max(0, sw); P.lk = -.5 * Math.max(0, sw); P.rl = .4 * Math.max(0, -sw); P.rk = -.5 * Math.max(0, -sw);
+      P.lean = .13 * sw; P.bob = -Math.abs(sw) * hh * .04;
+    } else if (act === 'outside') {
+      P.la = 1.25 + .12 * Math.sin(t * .9); P.le = P.la + .25; P.ra = P.la; P.re = P.le; P.bob = Math.sin(t * .9) * hh * .01;
+    } else if (act === 'make') {
+      P.la = 1.35; P.le = 1.5 + .28 * Math.sin(t * 3.2);
+    }
+    var baseY = footY - hh * .4 + P.bob, chestY = baseY - hh * .25;
+    if (act === 'walk') {            /* the ground sliding by, and your footprints */
+      ctx.strokeStyle = 'rgba(246,242,253,' + (.4 * away) + ')'; ctx.lineCap = 'round';
+      for (i = 0; i < 6; i++) {
+        var dxw = s.left + (((i * 90 - clock * 70) % (s.width + 90)) + s.width + 90) % (s.width + 90) - 45;
+        line(dxw, footY + gh * .2, dxw + 28, footY + gh * .2, 3);
+      }
+    }
+    if (act === 'make') {            /* an easel, and a painting that fills in */
+      var ex = ux - hh * .5, ey = baseY - hh * .3, cw = hh * .32, chh = hh * .38;
+      ctx.strokeStyle = '#8a6a4a'; line(ex - cw * .3, ey + chh * .5, ex - cw * .5, footY, 4); line(ex + cw * .3, ey + chh * .5, ex + cw * .5, footY, 4);
+      ctx.fillStyle = '#f1ecff'; rr(ex - cw / 2, ey - chh / 2, cw, chh, 4); ctx.fill();
+      var nst = stillMotion ? 5 : 1 + Math.floor(clock * .9) % 6;
+      ctx.lineCap = 'round';
+      for (i = 0; i < nst; i++) {
+        ctx.strokeStyle = ['#ff7fa3', '#ffc46b', '#5fc9bd', '#f0568f', '#7f8cff', '#ff8a5c'][i]; ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.moveTo(ex - cw * .34, ey - chh * .34 + i * chh * .135);
+        ctx.quadraticCurveTo(ex, ey - chh * .5 + i * chh * .16 + (i % 2 ? 14 : -4), ex + cw * .34, ey - chh * .3 + i * chh * .13); ctx.stroke();
+      }
+    }
+    var hands = drawFig(ux, footY, hh, mix([58, 122, 140], [120, 205, 196], pa), P);
+    var e = ease(pa);
+    drawLove(ux, chestY, hh * .13, .35 + .65 * e);
+    if (act === 'play') {            /* a guitar */
+      var gx0 = ux + hh * .03, gy0 = baseY - hh * .1;
+      ctx.strokeStyle = '#7a4a26'; ctx.lineCap = 'round'; line(gx0, gy0, hands.l[0], hands.l[1], hh * .035);
+      ctx.fillStyle = '#c8793d'; ctx.beginPath(); ctx.ellipse(gx0, gy0, hh * .115, hh * .085, -.4, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = '#3a2416'; ctx.beginPath(); ctx.arc(gx0 - hh * .01, gy0 - hh * .005, hh * .03, 0, 6.2832); ctx.fill();
+      ctx.strokeStyle = 'rgba(246,242,253,.8)'; line(gx0 + hh * .05, gy0 + hh * .02, hands.l[0], hands.l[1], 1.2);
+      ctx.fillStyle = mix([58, 122, 140], [120, 205, 196], pa); ctx.beginPath(); ctx.arc(hands.r[0], hands.r[1], hh * .034, 0, 6.2832); ctx.fill();
+    }
+    if (act === 'sing') {            /* a microphone */
+      ctx.strokeStyle = '#5b567c'; ctx.lineCap = 'round'; line(hands.r[0], hands.r[1], hands.r[0] - hh * .03, hands.r[1] - hh * .07, hh * .022);
+      ctx.fillStyle = '#d5cfea'; ctx.beginPath(); ctx.arc(hands.r[0] - hh * .035, hands.r[1] - hh * .085, hh * .03, 0, 6.2832); ctx.fill();
+    }
+    if (act === 'make') {            /* the brush */
+      ctx.strokeStyle = '#8a6a4a'; ctx.lineCap = 'round'; line(hands.l[0], hands.l[1], hands.l[0] - hh * .08, hands.l[1] - hh * .02, 3);
+      ctx.fillStyle = '#ff7fa3'; ctx.beginPath(); ctx.arc(hands.l[0] - hh * .09, hands.l[1] - hh * .022, 4, 0, 6.2832); ctx.fill();
+    }
+    if (act === 'sing' || act === 'play' || act === 'dance') {
+      ctx.font = '700 ' + Math.round(hh * .17) + 'px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      for (i = 0; i < 6; i++) {
+        u = stillMotion ? (i + .5) / 6 : (clock * .18 + i / 6) % 1;
+        ctx.fillStyle = 'rgba(' + LCOL[i % 4] + ',' + (Math.sin(Math.PI * u) * away) + ')';
+        ctx.fillText(i % 2 ? '♪' : '♫', ux + (i % 2 ? 1 : -1) * hh * (.22 + u * .3) + Math.sin(i * 2 + u * 5) * hh * .06, baseY - hh * .45 - u * hh * .4);
+      }
+    }
+    if (act === 'outside') {            /* fresh air moving past you, and a slow breath */
+      ctx.lineCap = 'round';
+      for (i = 0; i < 5; i++) {
+        u = stillMotion ? (i + .5) / 5 : (clock * .22 + i / 5) % 1;
+        var wx = s.left + u * s.width, wy = s.top + s.height * (.2 + i * .1);
+        ctx.strokeStyle = 'rgba(143,224,214,' + (Math.sin(Math.PI * u) * .7 * away) + ')'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(wx - 34, wy); ctx.quadraticCurveTo(wx - 10, wy - 12, wx + 8, wy); ctx.quadraticCurveTo(wx + 22, wy + 10, wx + 34, wy - 2); ctx.stroke();
+      }
+      u = stillMotion ? .5 : (clock * .2) % 1;
+      ctx.strokeStyle = 'rgba(143,224,214,' + ((1 - u) * .6 * away) + ')'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(ux, chestY, hh * (.15 + u * .4), 0, 6.2832); ctx.stroke();
+    }
+
+    /* what you are carrying: on your chest at first, then parked in a bay under the lamp */
+    var tx = x0 + bayW * 1.5, ty = gy + gh * .52, sx = ux, sy = chestY;
+    var mx = (sx + tx) / 2, my = Math.min(sy, ty) - m * .28;
+    var ox = (1 - e) * (1 - e) * sx + 2 * (1 - e) * e * mx + e * e * tx;
+    var oy = (1 - e) * (1 - e) * sy + 2 * (1 - e) * e * my + e * e * ty;
+    var orr = m * (.1 - .045 * e) * (stillMotion ? 1 : 1 + (1 - e) * .08 * Math.sin(clock * 9) + e * .04 * Math.sin(clock * 1.2));
+    ctx.globalCompositeOperation = 'lighter';
+    var vis = act === 'outside' ? 1 - away : 1;
+    glow(ox, oy, orr * 2.6, '255,112,86', (.55 - .25 * e) * vis);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(255,128,96,' + ((.92 - .3 * e) * vis) + ')'; ctx.beginPath(); ctx.arc(ox, oy, orr, 0, 6.2832); ctx.fill();
+    ctx.restore();
+  }
+
+  /* ---------- Drawing ---------- */
+  var vw = 0, vh = 0;
+  function resize() {
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    vw = document.documentElement.clientWidth || window.innerWidth; vh = window.innerHeight;
+    cv.width = Math.round(vw * dpr); cv.height = Math.round(vh * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function mix(a, b, t) {
+    return 'rgb(' + Math.round(a[0] + (b[0] - a[0]) * t) + ',' + Math.round(a[1] + (b[1] - a[1]) * t) + ',' + Math.round(a[2] + (b[2] - a[2]) * t) + ')';
+  }
+  function rr(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+  }
+  function line(x1, y1, x2, y2, w) { ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+  function glow(x, y, r, rgb, a) {
+    if (a <= 0.004 || r <= 0) return;
+    var g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, 'rgba(' + rgb + ',' + a + ')'); g.addColorStop(1, 'rgba(' + rgb + ',0)');
+    ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+
+  function drawBody(fx, fy, W, H, color) {
+    ctx.fillStyle = color; ctx.strokeStyle = color; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.arc(fx + W * .5, fy + H * .085, H * .066, 0, 6.2832); ctx.fill();
+    line(fx + W * .5, fy + H * .14, fx + W * .5, fy + H * .2, W * .16);
+    ctx.lineWidth = W * .1; ctx.beginPath();
+    ctx.moveTo(fx + W * .2, fy + H * .215); ctx.lineTo(fx + W * .8, fy + H * .215);
+    ctx.lineTo(fx + W * .7, fy + H * .56); ctx.lineTo(fx + W * .3, fy + H * .56); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    line(fx + W * .14, fy + H * .24, fx + W * .06, fy + H * .55, W * .125);
+    line(fx + W * .86, fy + H * .24, fx + W * .94, fy + H * .55, W * .125);
+    line(fx + W * .385, fy + H * .57, fx + W * .365, fy + H * .955, W * .2);
+    line(fx + W * .615, fy + H * .57, fx + W * .635, fy + H * .955, W * .2);
+  }
+
+  function drawBox(r) {
+    var bx = r.left, by = r.top, bw = r.width, bh = r.height, lidH = bh * .27, top = by + lidH, cx = bx + bw / 2;
+    ctx.globalCompositeOperation = 'lighter';
+    glow(cx, top, bw * .8, '255,150,95', lid * (.22 + .5 * boxGlow));
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = '#2b5b6a'; rr(bx + bw * .05, top, bw * .9, bh - lidH, 10); ctx.fill();
+    ctx.fillStyle = 'rgba(12,16,30,' + (lid * .85) + ')'; ctx.fillRect(bx + bw * .09, top, bw * .82, 7);
+    var seam = kept ? (.3 + .18 * Math.sin(clock * 1.2)) * Math.min(1, .4 + kept / 4) : 0;
+    seam = Math.max(seam, boxGlow * .8) * (1 - lid);
+    if (seam > .01) {
+      ctx.save(); ctx.shadowColor = 'rgba(255,150,95,' + seam + ')'; ctx.shadowBlur = 14;
+      ctx.strokeStyle = 'rgba(255,186,120,' + seam + ')'; ctx.lineCap = 'round';
+      line(bx + bw * .1, top + 1, bx + bw * .9, top + 1, 2); ctx.restore();
+    }
+    ctx.fillStyle = 'rgba(246,242,253,.9)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '700 ' + Math.max(15, Math.round(bh * .26)) + 'px ' + FONT;
+    ctx.fillText('for later', cx, top + (bh - lidH) * .55);
+    ctx.save(); ctx.translate(bx, top); ctx.rotate(-lid * .95);
+    ctx.fillStyle = '#3b7887'; rr(0, -lidH, bw, lidH, 8); ctx.fill(); ctx.restore();
+    return { x: bx, w: bw, y: top + 3 };
+  }
+
+  function drawL1(dt) {
+    if (phase !== 'gather' || holding) now += dt;
+    while (timeline.length && timeline[0].at <= now) timeline.shift().fn();
+    lid += (lidTarget - lid) * Math.min(1, dt * 3.5);
+    boxGlow = Math.max(0, boxGlow - dt * .12);
+
+    var f = figure.getBoundingClientRect(), b = pauseBtn.getBoundingClientRect(), bz = boxArt.getBoundingClientRect();
+    var fx = f.left, fy = f.top, W = f.width, H = f.height;
+    var bcx = b.left + b.width / 2, bcy = b.top + b.height / 2, R = b.width / 2;
+
+    var total = parts.length, home = 0, held = 0, i, p;
+    REGIONS.forEach(function (r) { r.home = 0; r.all = 0; });
+    for (i = 0; i < total; i++) {
+      p = parts[i]; p.reg.all++;
+      if (p.state === 'home') { home++; p.reg.home++; }
+      else if (p.state === 'held') held++;
+    }
+    var calm = phase === 'done' ? 1 : (total ? 1 - home / total : 1);
+    var loveTarget = phase === 'done' ? 1 : phase === 'rest' ? 0 : phase === 'gather' ? calm * .3 : .5;
+    love1 += (loveTarget - love1) * Math.min(1, dt * 1.2);
+    beat += dt * (128 - 68 * calm) / 60;
+
+    if (phase === 'gather') {
+      setText(pauseBtn, holding ? 'Holding' : 'Keep holding');
+      setText(hintEl, holding ? 'Keep holding. Breathe out slowly.' : 'Hold the button down. Your hands are safe here.');
+    } else {
+      setText(pauseBtn, phase === 'rest' ? 'Hold to pause' : phase === 'done' ? 'Hold again' : 'Let go');
+      if (phase === 'rest' && !loudNames().length) say(REST[Math.floor(clock / 6) % REST.length]);
+    }
+
+    drawBody(fx, fy, W, H, mix([78, 44, 82], [38, 84, 106], calm));
+    ctx.globalCompositeOperation = 'lighter';
+    REGIONS.forEach(function (r, ri) {
+      var heat = r.all ? r.home / r.all : 0, on = loud[r.id];
+      r.spots.forEach(function (s, si) {
+        var flick = stillMotion ? 1 : .82 + .18 * Math.sin(clock * 5.5 + ri * 1.7 + si);
+        var gx = fx + s.x * W, gy = fy + s.y * H;
+        glow(gx, gy, Math.max(s.rx * W, s.ry * H) * (on ? 2.8 : 2.2), on ? '255,150,90' : '255,112,86', heat * (on ? .9 : .3) * flick);
+        if (on && heat > .05) {            /* the place you chose is outlined so you can see it took */
+          ctx.strokeStyle = 'rgba(255,214,140,' + (.9 * heat) + ')'; ctx.lineWidth = 2.5;
+          ctx.beginPath(); ctx.ellipse(gx, gy, s.rx * W + 7, s.ry * H + 7, 0, 0, 6.2832); ctx.stroke();
+        }
+        var pu = (clock - r.pulse) / .7;
+        if (pu >= 0 && pu < 1) {
+          ctx.strokeStyle = 'rgba(255,236,190,' + (1 - pu) + ')'; ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.ellipse(gx, gy, s.rx * W + 7 + pu * 26, s.ry * H + 7 + pu * 26, 0, 0, 6.2832); ctx.stroke();
+        }
+      });
+    });
+    glow(fx + W * .5, fy + H * .3, W * 1.25, '143,224,214', calm * .17 * (.7 + .3 * Math.sin(clock * .9)));
+    ctx.globalCompositeOperation = 'source-over';
+
+    drawLove(fx + W * .5, fy + H * .3, W * .34, love1);
+    var mouth = drawBox(bz);
+
+    /* how much the button is holding so far */
+    if (phase === 'gather' && total) {
+      ctx.strokeStyle = 'rgba(255,196,107,.95)'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.arc(bcx, bcy, R + 9, -1.5708, -1.5708 + 6.2832 * (1 - home / total)); ctx.stroke();
+    }
+
+    ctx.globalCompositeOperation = 'lighter';
+    for (i = 0; i < total; i++) {
+      p = parts[i];
+      var x, y, a = Math.min(1, (clock - p.born) / 1.2), u, e, mx, my;
+      if (p.state === 'home') {
+        var amp = stillMotion ? .3 : (loud[p.reg.id] ? 4.6 : 2.4);
+        x = fx + (p.spot.x + p.ax * p.spot.rx) * W + Math.sin(clock * p.sp + p.ph) * amp;
+        y = fy + (p.spot.y + p.ay * p.spot.ry) * H + Math.cos(clock * p.sp * 1.3 + p.ph) * amp;
+        if (p.launch !== null && now >= p.launch) { p.state = 'fly'; p.t0 = now; p.sx = x; p.sy = y; }
+      } else if (p.state === 'fly') {
+        u = Math.min(1, (now - p.t0) / p.dur); e = ease(u);
+        var ex = bcx + p.ox * R, ey = bcy + p.oy * R;
+        mx = (p.sx + ex) / 2 + (stillMotion ? 0 : p.bend); my = (p.sy + ey) / 2;
+        x = (1 - e) * (1 - e) * p.sx + 2 * (1 - e) * e * mx + e * e * ex;
+        y = (1 - e) * (1 - e) * p.sy + 2 * (1 - e) * e * my + e * e * ey;
+        if (u >= 1) { p.state = 'held'; p.orA = Math.atan2(p.oy, p.ox); p.orR = Math.min(.8, Math.sqrt(p.ox * p.ox + p.oy * p.oy)); }
+      } else if (p.state === 'held') {
+        var ang = p.orA + (stillMotion ? 0 : clock * p.orS);
+        x = bcx + Math.cos(ang) * p.orR * R; y = bcy + Math.sin(ang) * p.orR * R;
+        if (p.launch2 !== null && now >= p.launch2) { p.state = 'pour'; p.t0 = now; p.sx = x; p.sy = y; p.dur = rnd(.9, 1.5); }
+      } else if (p.state === 'pour') {
+        u = Math.min(1, (now - p.t0) / p.dur); e = u * u;
+        var tx = mouth.x + p.bx * mouth.w, ty = mouth.y;
+        mx = (p.sx + tx) / 2; my = Math.min(p.sy, ty) - 40 - Math.abs(p.bend) * .5;
+        x = (1 - e) * (1 - e) * p.sx + 2 * (1 - e) * e * mx + e * e * tx;
+        y = (1 - e) * (1 - e) * p.sy + 2 * (1 - e) * e * my + e * e * ty;
+        if (u >= 1) { p.state = 'gone'; boxGlow = Math.min(1, boxGlow + .02); }
+      } else { continue; }
+
+      if (!stillMotion && p.px !== null && (p.state === 'fly' || p.state === 'pour')) {
+        ctx.strokeStyle = 'rgba(' + p.col + ',' + (.3 * a) + ')'; ctx.lineWidth = p.size; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(p.px, p.py); ctx.lineTo(x, y); ctx.stroke();
+      }
+      p.px = x; p.py = y;
+      ctx.fillStyle = 'rgba(' + p.col + ',' + (.16 * a) + ')';
+      ctx.beginPath(); ctx.arc(x, y, p.size * 2.6, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = 'rgba(' + p.col + ',' + (.9 * a) + ')';
+      ctx.beginPath(); ctx.arc(x, y, p.size, 0, 6.2832); ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    drawPound(fx + W * .5, fy + H * .29, W * .17, 1 - clamp(love1 * 1.6));
+    pauseBtn.style.setProperty('--fill', total ? (held / total).toFixed(3) : '0');
+  }
+
+  function frame(ts) {
+    var dt = Math.min(.05, (ts - last) / 1000 || 0); last = ts; clock += dt;
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    ctx.clearRect(0, 0, vw, vh);
+    if (level === 1) drawL1(dt); else if (level === 2) drawL2(dt); else if (level === 3) drawL3(dt); else drawL4(dt);
+    requestAnimationFrame(frame);
+  }
+
+  /* Home-screen app: save a copy so it opens with no signal (only works when the page is on a real web address). */
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    try { navigator.serviceWorker.register('sw.js').catch(function () {}); } catch (e) {}
+  }
+
+  spawnAll(false);
+  showCount();
+  fromHash();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
